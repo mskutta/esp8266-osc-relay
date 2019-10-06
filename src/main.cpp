@@ -53,7 +53,7 @@ const char index_html[] PROGMEM = R"=====(
   <script>
     angular.module('esp8266', [])
       .controller('esp8266', function($scope,$http) {
-      $scope.relays = [1,2,3,4,5,6,7,8]
+      $scope.relays = [1,2]
 
       $scope.post = function(action, relay) {
         $http({
@@ -86,12 +86,12 @@ int getPin(int index) {
   switch (index) {
     case 1: return D1;
     case 2: return D2;
-    case 3: return D3;
-    case 4: return D4;
-    case 5: return D5;
-    case 6: return D6;
-    case 7: return D7;
-    case 8: return D8;
+    // case 3: return D3;
+    // case 4: return D4;
+    // case 5: return D5;
+    // case 6: return D6;
+    // case 7: return D7;
+    // case 8: return D8;
     default: return D1;
   }
 }
@@ -252,20 +252,20 @@ void setup() {
 
   pinMode(D1, OUTPUT);
   pinMode(D2, OUTPUT);
-  pinMode(D3, OUTPUT);
-  pinMode(D4, OUTPUT);
-  pinMode(D5, OUTPUT);
-  pinMode(D7, OUTPUT);
-  pinMode(D8, OUTPUT);
+  // pinMode(D3, OUTPUT);
+  // pinMode(D4, OUTPUT);
+  // pinMode(D5, OUTPUT);
+  // pinMode(D7, OUTPUT);
+  // pinMode(D8, OUTPUT);
 
   digitalWrite(D1, OFF);
   digitalWrite(D2, OFF);
-  digitalWrite(D3, OFF);
-  digitalWrite(D4, OFF);
-  digitalWrite(D5, OFF);
-  digitalWrite(D6, OFF);
-  digitalWrite(D7, OFF);
-  digitalWrite(D8, OFF);
+  // digitalWrite(D3, OFF);
+  // digitalWrite(D4, OFF);
+  // digitalWrite(D5, OFF);
+  // digitalWrite(D6, OFF);
+  // digitalWrite(D7, OFF);
+  // digitalWrite(D8, OFF);
 
   /* mDNS */
   // Initialization happens inside ArduinoOTA;
