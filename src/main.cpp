@@ -1,3 +1,4 @@
+
 #if !(defined(ESP_NAME))
   #define ESP_NAME "relay"
 #endif
@@ -26,6 +27,12 @@
 #include <OSCMessage.h> // for sending OSC messages
 #include <OSCBundle.h> // for receiving OSC messages
 
+// LED
+#include <Ticker.h>
+Ticker ticker;
+int ledState = LOW;
+unsigned long ledNextRun = 0;
+
 /* WIFI */
 char hostname[32] = {0};
 
@@ -34,6 +41,7 @@ WiFiUDP Udp;
 OSCErrorCode error;
 const unsigned int OSC_PORT = 53000;
 
+#if (defined(HTTP))
 /* Web Server */
 ESP8266WebServer server(80);
 const char index_html[] PROGMEM = R"=====(
@@ -81,17 +89,12 @@ const char index_html[] PROGMEM = R"=====(
 </html>
 
 )=====";
+#endif
 
 int getPin(int index) {
   switch (index) {
     case 1: return D1;
     case 2: return D2;
-    // case 3: return D3;
-    // case 4: return D4;
-    // case 5: return D5;
-    // case 6: return D6;
-    // case 7: return D7;
-    // case 8: return D8;
     default: return D1;
   }
 }
@@ -143,6 +146,7 @@ void receiveOSC(){
   }
 }
 
+#if (defined(HTTP))
 void handleRoot() {
   server.send_P(200, "text/html", index_html);
 }
@@ -179,16 +183,29 @@ void handleTrigger() {
   //  server.send(400);
   //}
 }
+#endif
+
+void tick()
+{
+  //toggle state
+  int state = digitalRead(LED_BUILTIN);  // get the current state of GPIO1 pin
+  digitalWrite(LED_BUILTIN, !state);     // set pin to the opposite state
+}
 
 void configModeCallback (WiFiManager *myWiFiManager) {
   Serial.println(F("Config Mode"));
   Serial.println(WiFi.softAPIP());
   Serial.println(myWiFiManager->getConfigPortalSSID());
+  ticker.attach(0.2, tick);
 }
 
 void setup() {
+  
   /* Serial and I2C */
   Serial.begin(9600);
+
+  /* LED */
+  pinMode(LED_BUILTIN, OUTPUT);
 
   /* Function Select */
   Serial.println(ESP_NAME);
@@ -252,25 +269,15 @@ void setup() {
 
   pinMode(D1, OUTPUT);
   pinMode(D2, OUTPUT);
-  // pinMode(D3, OUTPUT);
-  // pinMode(D4, OUTPUT);
-  // pinMode(D5, OUTPUT);
-  // pinMode(D7, OUTPUT);
-  // pinMode(D8, OUTPUT);
 
   digitalWrite(D1, OFF);
   digitalWrite(D2, OFF);
-  // digitalWrite(D3, OFF);
-  // digitalWrite(D4, OFF);
-  // digitalWrite(D5, OFF);
-  // digitalWrite(D6, OFF);
-  // digitalWrite(D7, OFF);
-  // digitalWrite(D8, OFF);
 
   /* mDNS */
   // Initialization happens inside ArduinoOTA;
   MDNS.addService(ESP_NAME, "udp", OSC_PORT);
 
+#if (defined(HTTP))
   server.on("/", HTTP_GET, handleRoot);
   server.on("/activate", HTTP_POST, handleActivate);
   server.on("/deactivate", HTTP_POST, handleDeactivate);
@@ -281,11 +288,26 @@ void setup() {
 
   server.begin();                           // Actually start the server
   Serial.println("HTTP server started");
-
+#endif
 }
 
 void loop() {
   ArduinoOTA.handle();
   receiveOSC();
+
+#if (defined(HTTP))
   server.handleClient(); 
+#endif
+
+  // LED
+  unsigned long currentMillis = millis();
+  if (ledNextRun < currentMillis) {
+    if (ledState == LOW) {
+      ledState = HIGH;
+      ledNextRun = currentMillis + 1000;
+    } else {
+      ledState = LOW;
+    }
+    digitalWrite(LED_BUILTIN, ledState);
+  }
 }
