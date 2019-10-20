@@ -3,14 +3,6 @@
   #define ESP_NAME "relay"
 #endif
 
-#if (defined(INVERT))
-  #define ON LOW
-  #define OFF HIGH 
-#else
-  #define ON HIGH
-  #define OFF LOW 
-#endif
-
 #include <Arduino.h>
 
 #include <ESP8266WiFi.h> // WIFI support
@@ -40,6 +32,7 @@ char hostname[32] = {0};
 WiFiUDP Udp;
 OSCErrorCode error;
 const unsigned int OSC_PORT = 53000;
+unsigned long triggerTimeout = 0;
 
 #if (defined(HTTP))
 /* Web Server */
@@ -61,7 +54,7 @@ const char index_html[] PROGMEM = R"=====(
   <script>
     angular.module('esp8266', [])
       .controller('esp8266', function($scope,$http) {
-      $scope.relays = [1,2]
+      $scope.relays = [1]
 
       $scope.post = function(action, relay) {
         $http({
@@ -91,35 +84,17 @@ const char index_html[] PROGMEM = R"=====(
 )=====";
 #endif
 
-int getPin(int index) {
-  switch (index) {
-    case 1: return D1;
-    case 2: return D2;
-    default: return D1;
-  }
-}
-
 void receiveRelayActivate(OSCMessage &msg, int addrOffset){
-  if (msg.isInt(0)) {
-    int pin = getPin(msg.getInt(0));
-    digitalWrite(pin, ON);
-  }
+  digitalWrite(D1, HIGH);
 }
 
 void receiveRelayDeactivate(OSCMessage &msg, int addrOffset){
-  if (msg.isInt(0)) {
-    int pin = getPin(msg.getInt(0));
-    digitalWrite(pin, OFF);
-  }
+  digitalWrite(D1, LOW);
 }
 
 void receiveRelayTrigger(OSCMessage &msg, int addrOffset){
-  if (msg.isInt(0)) {
-    int pin = getPin(msg.getInt(0));
-    digitalWrite(pin, ON);
-    delay(100);
-    digitalWrite(pin, OFF);
-  }
+  digitalWrite(D1, HIGH);
+  triggerTimeout = millis() + 100;
 }
 
 void receiveOSC(){
@@ -152,36 +127,19 @@ void handleRoot() {
 }
 
 void handleActivate() {
-  if (server.hasArg("relay")) {
-    int relay = server.arg("relay").toInt();
-    digitalWrite(getPin(relay), ON);
-    server.send(200);
-  } else {
-    server.send(400);
-  }
+  digitalWrite(D1, HIGH);
+  server.send(200);
 }
 
 void handleDeactivate() {
-  if (server.hasArg("relay")) {
-    int relay = server.arg("relay").toInt(); 
-    digitalWrite(getPin(relay), OFF);
-    server.send(200);
-  } else {
-    server.send(400);
-  }
+  digitalWrite(D1, LOW);
+  server.send(200);
 }
 
 void handleTrigger() {
-  //if (server.hasArg("relay")) {
-    int relay = server.arg("relay").toInt();
-    int pin = getPin(relay);
-    digitalWrite(pin, ON);
-    delay(100);
-    digitalWrite(pin, OFF);
-    server.send(200);
-  //} else {
-  //  server.send(400);
-  //}
+  digitalWrite(D1, HIGH);
+  triggerTimeout = millis() + 100;
+  server.send(200);
 }
 #endif
 
@@ -268,10 +226,7 @@ void setup() {
   ArduinoOTA.begin();
 
   pinMode(D1, OUTPUT);
-  pinMode(D2, OUTPUT);
-
-  digitalWrite(D1, OFF);
-  digitalWrite(D2, OFF);
+  digitalWrite(D1, LOW);
 
   /* mDNS */
   // Initialization happens inside ArduinoOTA;
@@ -298,6 +253,11 @@ void loop() {
 #if (defined(HTTP))
   server.handleClient(); 
 #endif
+
+  if (triggerTimeout != 0 && triggerTimeout < millis()) {
+    digitalWrite(D1, LOW);
+    triggerTimeout = 0;
+  }
 
   // LED
   unsigned long currentMillis = millis();
