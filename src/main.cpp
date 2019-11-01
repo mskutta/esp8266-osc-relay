@@ -94,7 +94,7 @@ void receiveRelayDeactivate(OSCMessage &msg, int addrOffset){
 
 void receiveRelayTrigger(OSCMessage &msg, int addrOffset){
   digitalWrite(D1, HIGH);
-  triggerTimeout = millis() + 100;
+  triggerTimeout = millis() + 1000; // Number of milliseconds to activate relay.
 }
 
 void receiveOSC(){
